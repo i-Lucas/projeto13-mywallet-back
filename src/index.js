@@ -142,3 +142,66 @@ app.get("/historic", async (req, res) => {
     } catch (error) { return res.status(500).send("error while accessing database"); }
 
 });
+
+app.delete("/delete", async (req, res) => {
+
+    const id = req.query.id;
+    const { authorization } = req.headers;
+    const token = authorization?.replace('Bearer ', '');
+
+    try {
+
+        const session = await db.collection("sessions").findOne({ token });
+        if (!session) return res.status(403).send("session expired");
+
+        const user = await db.collection("users").findOne({ _id: session.userID });
+        if (!user) return res.status(403).send("you must be logged in to continue");
+        
+        const historic = db.collection("historic");
+        const record = await historic.findOne({ _id: new mongodb.ObjectId(id) });
+        if (!record) return res.status(404).send("record not found");
+
+        await historic.deleteOne({ _id: new mongodb.ObjectId(id) });
+        res.sendStatus(200);
+
+    } catch (error) { return res.status(500).send("error while accessing database"); }
+})
+
+app.get("/cache", async (req, res) => {
+
+    const { authorization } = req.headers;
+    const token = authorization?.replace('Bearer ', '');
+
+    const session = await db.collection("sessions").findOne({ token });
+    if (!session) return res.status(403).send("session expired");
+
+    const user = await db.collection("users").findOne({ _id: session.userID });
+    if (!user) return res.status(403).send("you must be logged in to continue");
+
+    const historic = await db.collection("historic").find({ userID: user._id }).toArray();
+
+    let cache = 0;
+    historic.forEach(record => {
+        if (record.type === "deposit") cache += parseInt(record.amount);
+        else if (record.type === "withdraw") cache -= parseInt(record.amount);
+    });
+
+    return res.status(200).send(`${cache}`);
+});
+
+app.put("/edit", async (req, res) => {
+
+    const id = req.query.id;
+    const {description} = req.body;
+
+    try {
+        
+        const historic = db.collection("historic");
+        const record = await historic.findOne({ _id: new mongodb.ObjectId(id) });
+        if (!record) return res.status(404).send("record not found");
+
+        await historic.updateOne({ _id: new mongodb.ObjectId(id) }, { $set: { description } });
+        res.sendStatus(200);
+
+    } catch (error) { return res.status(500).send("error while accessing database"); }
+})

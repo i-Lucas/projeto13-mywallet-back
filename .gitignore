@@ -5,3 +5,4 @@
 
 # production
 .env
+dev.js

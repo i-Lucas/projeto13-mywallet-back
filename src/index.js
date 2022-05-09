@@ -13,9 +13,9 @@ app.use(cors(), express.json());
 
 let db = null;
 
-app.listen(process.env.SERVER_PORT, () => {
+app.listen(process.env.PORT, () => {
 
-    console.log(`Server is running on port ${process.env.SERVER_PORT}`);
+    console.log(`Server is running on port ${process.env.PORT}`);
     const mongoClient = new mongodb.MongoClient(process.env.MONGO_PORT);
 
     mongoClient.connect().then(() => {

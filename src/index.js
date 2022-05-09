@@ -42,16 +42,15 @@ app.post("/sign-in", async (req, res) => {
         const user = await db.collection("users").findOne({ email: data.email });
         const username = user.username;
 
-        if (user && bcrypt.compareSync(req.body.password, user.password)) {
+        const validate = user && bcrypt.compareSync(req.body.password, user.password);
+        if (!validate) return res.status(404).send("invalid email or password");
 
-            const token = uuid();
-            const time = new Date().toLocaleTimeString();
-            const userID = user._id;
+        const token = uuid();
+        const time = new Date().toLocaleTimeString();
+        const userID = user._id;
 
-            await db.collection("sessions").insertOne({ time, token, userID });
-            return res.status(200).send({ username, token });
-
-        } else return res.status(404).send("invalid email or password");
+        await db.collection("sessions").insertOne({ time, token, userID });
+        return res.status(200).send({ username, token });
 
     } catch (error) { return res.status(500).send("error while accessing database"); }
 
@@ -156,7 +155,7 @@ app.delete("/delete", async (req, res) => {
 
         const user = await db.collection("users").findOne({ _id: session.userID });
         if (!user) return res.status(403).send("you must be logged in to continue");
-        
+
         const historic = db.collection("historic");
         const record = await historic.findOne({ _id: new mongodb.ObjectId(id) });
         if (!record) return res.status(404).send("record not found");
@@ -192,10 +191,10 @@ app.get("/cache", async (req, res) => {
 app.put("/edit", async (req, res) => {
 
     const id = req.query.id;
-    const {description} = req.body;
+    const { description } = req.body;
 
     try {
-        
+
         const historic = db.collection("historic");
         const record = await historic.findOne({ _id: new mongodb.ObjectId(id) });
         if (!record) return res.status(404).send("record not found");
